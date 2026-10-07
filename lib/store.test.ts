@@ -45,7 +45,7 @@ describe("file store", () => {
     expect(await store.addPost("00000000-0000-0000-0000-000000000000", { likelihood: "no", why: "x" })).toBe(false);
 
     const [row] = await store.list();
-    expect(row).toMatchObject({ id, ...newResponse, post: { likelihood: "yes", why: "cheap" } });
+    expect(row).toMatchObject({ id, ...newResponse, post: { likelihood: "yes", why: "cheap" }, picks: [] });
   });
 
   it("updates details on a retry, but not after the after-answers are in", async () => {
@@ -59,6 +59,25 @@ describe("file store", () => {
     await store.addPost(id, { likelihood: "maybe", why: "x" });
     expect(await store.updateDetails(id, newResponse.details, 1)).toBe(false);
     expect(await store.list()).toHaveLength(1);
+  });
+
+  it("records each person picked once, and counts picks since a time", async () => {
+    const store = createFileStore(path.join(dir, "r.json"));
+    const a = await store.create(newResponse);
+    const b = await store.create(newResponse);
+    const morning = new Date("2026-10-07T01:00:00Z");
+    const evening = new Date("2026-10-07T12:00:00Z");
+
+    expect(await store.addPick(a, "s01", morning)).toBe(true);
+    expect(await store.addPick(a, "s01", evening)).toBe(false);
+    expect(await store.addPick(a, "s09", evening)).toBe(true);
+    expect(await store.addPick(b, "s01", evening)).toBe(true);
+    expect(await store.addPick("00000000-0000-0000-0000-000000000000", "s01", evening)).toBe(false);
+
+    expect((await store.get(a))?.picks.map((p) => p.profileId)).toEqual(["s01", "s09"]);
+    expect(await store.get("00000000-0000-0000-0000-000000000000")).toBeNull();
+    expect(await store.countPicksSince(new Date("2026-10-07T00:00:00Z"))).toBe(3);
+    expect(await store.countPicksSince(new Date("2026-10-07T06:00:00Z"))).toBe(2);
   });
 
   it("keeps every row when requests arrive at the same time", async () => {

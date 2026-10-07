@@ -7,6 +7,7 @@ function response(
   barriers: [Barrier, Barrier],
   likelihood: Likelihood | null,
   over: Partial<StoredResponse["pre"]> = {},
+  pickedIds: string[] = [],
 ): StoredResponse {
   n += 1;
   return {
@@ -33,6 +34,7 @@ function response(
     },
     matchCount: 5,
     post: likelihood ? { likelihood, why: "y" } : null,
+    picks: pickedIds.map((profileId) => ({ profileId, at: "2026-10-07T01:00:00.000Z" })),
   };
 }
 
@@ -133,5 +135,19 @@ describe("summarize", () => {
     ]);
     expect(s.gate1.status).toBe("pass");
     expect(s.gate2.status).toBe("waiting");
+  });
+
+  it("counts date plans and who was picked, most picked first", () => {
+    const s = summarize([
+      response(["money", "time"], null, {}, ["s01", "s09"]),
+      response(["money", "time"], null, {}, ["s09"]),
+      response(["money", "time"], null),
+    ]);
+    expect(s.plansMade).toBe(3);
+    expect(s.respondentsWhoPlanned).toBe(2);
+    expect(s.pickCounts).toEqual([
+      ["s09", 2],
+      ["s01", 1],
+    ]);
   });
 });

@@ -26,6 +26,9 @@ export function summarize(responses: StoredResponse[]) {
     r.pre.topBarriers.some((b) => b === "money" || b === "time"),
   ).length;
   const yes = posts.filter((p) => p.likelihood === "yes").length;
+  const picks = responses.flatMap((r) => r.picks);
+  const pickCounts = new Map<string, number>();
+  for (const p of picks) pickCounts.set(p.profileId, (pickCounts.get(p.profileId) ?? 0) + 1);
 
   return {
     total: responses.length,
@@ -35,6 +38,10 @@ export function summarize(responses: StoredResponse[]) {
     likelihoodCounts: countBy(LIKELIHOODS, posts.map((p) => p.likelihood)),
     avgCost: average(responses.map((r) => r.pre.lastDateCost)),
     avgHours: average(responses.map((r) => r.pre.lastDateHours)),
+    plansMade: picks.length,
+    respondentsWhoPlanned: responses.filter((r) => r.picks.length > 0).length,
+    /** [profileId, times picked], most picked first. */
+    pickCounts: [...pickCounts].sort((a, b) => b[1] - a[1]),
     /** Gate 1: money or time is in the respondent's top two barriers. */
     gate1: gate(moneyOrTime, responses.length),
     /** Gate 2: answered "yes" to "more likely to date", out of those who answered. */

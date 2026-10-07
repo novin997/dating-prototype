@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildPlanPrompt, generatePlan, parsePlan, planLimits } from "./date-plan";
+import { buildPlanPrompt, generatePlan, parsePlan, planLimits, startOfSingaporeDay } from "./date-plan";
 import type { Details, Profile } from "./types";
 
 const me: Details = {
@@ -130,5 +130,16 @@ describe("generatePlan", () => {
       throw new Error("offline");
     });
     expect(await generatePlan(me, them, config, throwing)).toBeNull();
+  });
+});
+
+describe("startOfSingaporeDay", () => {
+  it("returns Singapore midnight (16:00 UTC the day before)", () => {
+    expect(startOfSingaporeDay(new Date("2026-10-07T06:00:00Z")).toISOString()).toBe("2026-10-06T16:00:00.000Z");
+  });
+
+  it("rolls over at Singapore midnight, not UTC midnight", () => {
+    expect(startOfSingaporeDay(new Date("2026-10-07T16:30:00Z")).toISOString()).toBe("2026-10-07T16:00:00.000Z");
+    expect(startOfSingaporeDay(new Date("2026-10-07T15:59:00Z")).toISOString()).toBe("2026-10-06T16:00:00.000Z");
   });
 });

@@ -3,7 +3,16 @@ import type { Area, Details, Profile } from "./types";
 
 export const OPENCODE_URL = "https://opencode.ai/zen/v1/chat/completions";
 export const DEFAULT_MODEL = "space-bunny-free";
+export const DAILY_PLAN_CAP = 200;
 const TIMEOUT_MS = 30_000;
+const SINGAPORE_OFFSET_MS = 8 * 60 * 60 * 1000; // UTC+8, no daylight saving
+
+/** The daily cap resets at midnight Singapore time. */
+export function startOfSingaporeDay(now: Date): Date {
+  const local = new Date(now.getTime() + SINGAPORE_OFFSET_MS);
+  local.setUTCHours(0, 0, 0, 0);
+  return new Date(local.getTime() - SINGAPORE_OFFSET_MS);
+}
 
 export type DateIdea = { title: string; description: string; costPerPerson: number; hours: number };
 export type Stop = { time: string; place: string; activity: string; costPerPerson: number };

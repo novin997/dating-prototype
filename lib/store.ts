@@ -13,6 +13,11 @@ export interface ResponseStore {
   /** Returns false if the response doesn't exist or already has after-answers. */
   addPost(id: string, post: PostSurvey): Promise<boolean>;
   list(): Promise<StoredResponse[]>;
+  get(id: string): Promise<StoredResponse | null>;
+  /** Records a date-planner pick. Returns false if the response doesn't exist or already picked this person. */
+  addPick(id: string, profileId: string, at: Date): Promise<boolean>;
+  /** Number of date plans made at or after `since`, across all responses. */
+  countPicksSince(since: Date): Promise<number>;
 }
 
 /** Local development store: one JSON file. Writes are serialised so concurrent requests don't clobber each other. */
@@ -21,7 +26,8 @@ export function createFileStore(file: string): ResponseStore {
 
   async function load(): Promise<StoredResponse[]> {
     try {
-      return JSON.parse(await readFile(file, "utf8"));
+      const rows: StoredResponse[] = JSON.parse(await readFile(file, "utf8"));
+      return rows.map((r) => ({ ...r, picks: r.picks ?? [] }));
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw e;
@@ -44,7 +50,7 @@ export function createFileStore(file: string): ResponseStore {
       serial(async () => {
         const all = await load();
         const id = randomUUID();
-        all.push({ id, createdAt: new Date().toISOString(), ...r, post: null });
+        all.push({ id, createdAt: new Date().toISOString(), ...r, post: null, picks: [] });
         await save(all);
         return id;
       }),
@@ -67,6 +73,20 @@ export function createFileStore(file: string): ResponseStore {
         return true;
       }),
     list: () => serial(load),
+    get: (id) => serial(async () => (await load()).find((r) => r.id === id) ?? null),
+    addPick: (id, profileId, at) =>
+      serial(async () => {
+        const all = await load();
+        const row = all.find((r) => r.id === id);
+        if (!row || row.picks.some((p) => p.profileId === profileId)) return false;
+        row.picks.push({ profileId, at: at.toISOString() });
+        await save(all);
+        return true;
+      }),
+    countPicksSince: (since) =>
+      serial(async () =>
+        (await load()).flatMap((r) => r.picks).filter((p) => new Date(p.at) >= since).length,
+      ),
   };
 }
 
@@ -75,15 +95,37 @@ export function createPostgresStore(url: string): ResponseStore {
   const sql = neon(url);
   let ready: Promise<unknown> | null = null;
   const ensureTable = () =>
-    (ready ??= sql`
-      CREATE TABLE IF NOT EXISTS responses (
-        id uuid PRIMARY KEY,
-        created_at timestamptz NOT NULL DEFAULT now(),
-        pre jsonb NOT NULL,
-        details jsonb NOT NULL,
-        match_count integer NOT NULL,
-        post jsonb
-      )`);
+    (ready ??= (async () => {
+      await sql`
+        CREATE TABLE IF NOT EXISTS responses (
+          id uuid PRIMARY KEY,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          pre jsonb NOT NULL,
+          details jsonb NOT NULL,
+          match_count integer NOT NULL,
+          post jsonb
+        )`;
+      await sql`
+        CREATE TABLE IF NOT EXISTS picks (
+          response_id uuid NOT NULL REFERENCES responses(id),
+          profile_id text NOT NULL,
+          at timestamptz NOT NULL,
+          PRIMARY KEY (response_id, profile_id)
+        )`;
+    })());
+
+  const toResponse = (r: Record<string, unknown>): StoredResponse => ({
+    id: r.id as string,
+    createdAt: new Date(r.created_at as string).toISOString(),
+    pre: r.pre as PreSurvey,
+    details: r.details as Details,
+    matchCount: r.match_count as number,
+    post: r.post as PostSurvey | null,
+    picks: (r.picks as { profileId: string; at: string }[]).map((p) => ({
+      profileId: p.profileId,
+      at: new Date(p.at).toISOString(),
+    })),
+  });
 
   return {
     async create(r) {
@@ -107,16 +149,37 @@ export function createPostgresStore(url: string): ResponseStore {
     },
     async list() {
       await ensureTable();
-      const rows = await sql`SELECT id, created_at, pre, details, match_count, post
-                             FROM responses ORDER BY created_at`;
-      return rows.map((r) => ({
-        id: r.id,
-        createdAt: new Date(r.created_at).toISOString(),
-        pre: r.pre,
-        details: r.details,
-        matchCount: r.match_count,
-        post: r.post,
-      }));
+      const rows = await sql`
+        SELECT r.id, r.created_at, r.pre, r.details, r.match_count, r.post,
+               COALESCE(json_agg(json_build_object('profileId', p.profile_id, 'at', p.at) ORDER BY p.at)
+                        FILTER (WHERE p.profile_id IS NOT NULL), '[]') AS picks
+        FROM responses r LEFT JOIN picks p ON p.response_id = r.id
+        GROUP BY r.id ORDER BY r.created_at`;
+      return rows.map(toResponse);
+    },
+    async get(id) {
+      await ensureTable();
+      const rows = await sql`
+        SELECT r.id, r.created_at, r.pre, r.details, r.match_count, r.post,
+               COALESCE(json_agg(json_build_object('profileId', p.profile_id, 'at', p.at) ORDER BY p.at)
+                        FILTER (WHERE p.profile_id IS NOT NULL), '[]') AS picks
+        FROM responses r LEFT JOIN picks p ON p.response_id = r.id
+        WHERE r.id = ${id}
+        GROUP BY r.id`;
+      return rows.length ? toResponse(rows[0]) : null;
+    },
+    async addPick(id, profileId, at) {
+      await ensureTable();
+      const rows = await sql`
+        INSERT INTO picks (response_id, profile_id, at)
+        SELECT id, ${profileId}, ${at.toISOString()} FROM responses WHERE id = ${id}
+        ON CONFLICT DO NOTHING RETURNING profile_id`;
+      return rows.length === 1;
+    },
+    async countPicksSince(since) {
+      await ensureTable();
+      const rows = await sql`SELECT count(*)::int AS n FROM picks WHERE at >= ${since.toISOString()}`;
+      return rows[0].n as number;
     },
   };
 }

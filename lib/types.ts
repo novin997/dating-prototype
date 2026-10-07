@@ -74,6 +74,10 @@ export type StoredResponse = {
   details: Details;
   matchCount: number;
   post: PostSurvey | null;
+  /** Sample people this respondent asked the date planner about. */
+  picks: PlanPick[];
 };
+
+export type PlanPick = { profileId: string; at: string };
 
 export type Validated<T> = { ok: true; value: T } | { ok: false; errors: Record<string, string> };
