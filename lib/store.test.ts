@@ -48,6 +48,19 @@ describe("file store", () => {
     expect(row).toMatchObject({ id, ...newResponse, post: { likelihood: "yes", why: "cheap" } });
   });
 
+  it("updates details on a retry, but not after the after-answers are in", async () => {
+    const store = createFileStore(path.join(dir, "r.json"));
+    const id = await store.create({ ...newResponse, matchCount: 0 });
+    const wider = { ...newResponse.details, ageMin: 21, ageMax: 50 };
+
+    expect(await store.updateDetails(id, wider, 5)).toBe(true);
+    expect((await store.list())[0]).toMatchObject({ details: wider, matchCount: 5 });
+
+    await store.addPost(id, { likelihood: "maybe", why: "x" });
+    expect(await store.updateDetails(id, newResponse.details, 1)).toBe(false);
+    expect(await store.list()).toHaveLength(1);
+  });
+
   it("keeps every row when requests arrive at the same time", async () => {
     const store = createFileStore(path.join(dir, "r.json"));
     await Promise.all(Array.from({ length: 10 }, () => store.create(newResponse)));

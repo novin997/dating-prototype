@@ -8,6 +8,8 @@ export type NewResponse = { pre: PreSurvey; details: Details; matchCount: number
 
 export interface ResponseStore {
   create(r: NewResponse): Promise<string>;
+  /** For a retry after "no match". Returns false if the response doesn't exist or already has after-answers. */
+  updateDetails(id: string, details: Details, matchCount: number): Promise<boolean>;
   /** Returns false if the response doesn't exist or already has after-answers. */
   addPost(id: string, post: PostSurvey): Promise<boolean>;
   list(): Promise<StoredResponse[]>;
@@ -46,6 +48,15 @@ export function createFileStore(file: string): ResponseStore {
         await save(all);
         return id;
       }),
+    updateDetails: (id, details, matchCount) =>
+      serial(async () => {
+        const all = await load();
+        const row = all.find((r) => r.id === id);
+        if (!row || row.post) return false;
+        Object.assign(row, { details, matchCount });
+        await save(all);
+        return true;
+      }),
     addPost: (id, post) =>
       serial(async () => {
         const all = await load();
@@ -81,6 +92,12 @@ export function createPostgresStore(url: string): ResponseStore {
       await sql`INSERT INTO responses (id, pre, details, match_count)
                 VALUES (${id}, ${JSON.stringify(r.pre)}, ${JSON.stringify(r.details)}, ${r.matchCount})`;
       return id;
+    },
+    async updateDetails(id, details, matchCount) {
+      await ensureTable();
+      const rows = await sql`UPDATE responses SET details = ${JSON.stringify(details)}, match_count = ${matchCount}
+                             WHERE id = ${id} AND post IS NULL RETURNING id`;
+      return rows.length === 1;
     },
     async addPost(id, post) {
       await ensureTable();
