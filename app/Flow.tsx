@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 import {
   AREA_FLEX_LABELS,
   AREA_LABELS,
@@ -267,6 +268,9 @@ export default function Flow({ plannerEnabled }: { plannerEnabled: boolean }) {
         </div>
         <div className="actions">
           <button onClick={() => go("pre")}>I understand, start</button>
+          <Link href="/" className="action secondary">
+            About this prototype
+          </Link>
         </div>
       </>
     );
