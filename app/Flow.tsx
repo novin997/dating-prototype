@@ -9,16 +9,18 @@ import {
   HARDEST_TIME_LABELS,
   LIKELIHOOD_LABELS,
 } from "@/lib/labels";
+import type { DatePlan } from "@/lib/date-plan";
 import { MIN_AGE, type Barrier, type Gender, type Profile } from "@/lib/types";
 import { validateDetails, validatePost, validatePre } from "@/lib/validation";
 
-type Step = "consent" | "pre" | "details" | "matches" | "post" | "thanks";
+type Step = "consent" | "pre" | "details" | "matches" | "plan" | "post" | "thanks";
 type Errors = Record<string, string>;
 
 const STEP_NUMBER: Partial<Record<Step, string>> = {
   pre: "Step 1 of 4",
   details: "Step 2 of 4",
   matches: "Step 3 of 4",
+  plan: "Step 3 of 4",
   post: "Step 4 of 4",
 };
 
@@ -109,7 +111,39 @@ function Checks<T extends string>({
   );
 }
 
-export default function Flow() {
+function PlanView({ plan }: { plan: DatePlan }) {
+  return (
+    <>
+      <h2>Date ideas</h2>
+      {plan.ideas.map((idea) => (
+        <div key={idea.title} className="card">
+          <strong>{idea.title}</strong>
+          <p className="facts">
+            About S${idea.costPerPerson} each · {idea.hours} h
+          </p>
+          <p>{idea.description}</p>
+        </div>
+      ))}
+      <h2>Itinerary: {plan.itinerary.idea}</h2>
+      <ol className="stops">
+        {plan.itinerary.stops.map((stop, i) => (
+          <li key={i}>
+            <strong>{stop.time}</strong> · {stop.place}
+            <br />
+            {stop.activity}
+            <span className="muted"> · S${stop.costPerPerson} each</span>
+          </li>
+        ))}
+      </ol>
+      <p className="muted">
+        Total about S${plan.itinerary.stops.reduce((sum, s) => sum + s.costPerPerson, 0)} each. Ideas are written by AI:
+        check opening hours and prices before you go.
+      </p>
+    </>
+  );
+}
+
+export default function Flow({ plannerEnabled }: { plannerEnabled: boolean }) {
   const [step, setStep] = useState<Step>("consent");
   const [pre, setPre] = useState(emptyPre);
   const [details, setDetails] = useState(emptyDetails);
@@ -118,6 +152,9 @@ export default function Flow() {
   const [busy, setBusy] = useState(false);
   const [responseId, setResponseId] = useState<string | null>(null);
   const [matches, setMatches] = useState<Profile[]>([]);
+  const [plans, setPlans] = useState<Record<string, DatePlan>>({});
+  const [planFor, setPlanFor] = useState<Profile | null>(null);
+  const [planning, setPlanning] = useState<string | null>(null);
 
   useEffect(() => window.scrollTo(0, 0), [step]);
 
@@ -163,6 +200,31 @@ export default function Flow() {
     go("matches");
   }
 
+  async function planDate(p: Profile) {
+    if (plans[p.id]) {
+      setPlanFor(p);
+      return go("plan");
+    }
+    setPlanning(p.id);
+    setErrors({});
+    try {
+      const res = await fetch(`/api/responses/${responseId}/plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId: p.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return setErrors({ [`plan-${p.id}`]: data.error ?? "Couldn't make a plan. Please try again." });
+      setPlans((prev) => ({ ...prev, [p.id]: data.plan }));
+      setPlanFor(p);
+      go("plan");
+    } catch {
+      setErrors({ [`plan-${p.id}`]: "Couldn't reach the server. Check your connection and try again." });
+    } finally {
+      setPlanning(null);
+    }
+  }
+
   async function submitPost() {
     const r = validatePost(post);
     if (!r.ok) return setErrors(r.errors);
@@ -184,6 +246,13 @@ export default function Flow() {
         <div className="notice">
           This is a research prototype. Your answers are anonymous and stored to help us understand dating in
           Singapore. The profiles shown are fictional. Don&apos;t enter anything that identifies you.
+          {plannerEnabled && (
+            <>
+              {" "}
+              Date ideas are written by an AI service. Your age, area, budget and free evenings (never your written
+              answers) are sent to it.
+            </>
+          )}
         </div>
         <div className="actions">
           <button onClick={() => go("pre")}>I understand, start</button>
@@ -395,6 +464,18 @@ export default function Flow() {
                   {p.freeEvenings === 1 ? "" : "s"} a week
                 </p>
                 <p>{p.blurb}</p>
+                {plannerEnabled && (
+                  <>
+                    <button className="secondary" onClick={() => planDate(p)} disabled={planning !== null}>
+                      {planning === p.id
+                        ? "Planning…"
+                        : plans[p.id]
+                          ? `See date plan with ${p.name}`
+                          : `Plan a date with ${p.name}`}
+                    </button>
+                    {errors[`plan-${p.id}`] && <p className="error">{errors[`plan-${p.id}`]}</p>}
+                  </>
+                )}
               </div>
             ))}
             <div className="actions">
@@ -402,6 +483,25 @@ export default function Flow() {
             </div>
           </>
         )}
+      </>
+    );
+  }
+
+  if (step === "plan" && planFor && plans[planFor.id]) {
+    return (
+      <>
+        {stepLabel}
+        <h1>A date with {planFor.name}</h1>
+        <p className="muted">
+          <span className="tag">Sample profile</span> {AREA_LABELS[planFor.area]} · S${planFor.budget} per date
+        </p>
+        <PlanView plan={plans[planFor.id]} />
+        <div className="actions">
+          <button onClick={() => go("post")}>Next</button>
+          <button className="secondary" onClick={() => go("matches")}>
+            Back to suggestions
+          </button>
+        </div>
       </>
     );
   }

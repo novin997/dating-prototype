@@ -10,6 +10,7 @@ import {
   LIKELIHOOD_LABELS,
 } from "@/lib/labels";
 import { hasValidSession, RESULTS_COOKIE } from "@/lib/results-auth";
+import { SAMPLE_PROFILES } from "@/lib/profiles";
 import { getStore } from "@/lib/store";
 import { GATE_THRESHOLD, MIN_RESPONSES, summarize, type Gate } from "@/lib/summary";
 
@@ -18,6 +19,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+const nameOf = (profileId: string) => SAMPLE_PROFILES.find((p) => p.id === profileId)?.name ?? profileId;
 const money = (n: number | null) => (n === null ? "–" : `S$${n.toFixed(0)}`);
 const hours = (n: number | null) => (n === null ? "–" : `${n.toFixed(1)} h`);
 
@@ -128,6 +130,29 @@ async function Results({ searchParams }: Pick<PageProps<"/results">, "searchPara
       <h2>More likely to date?</h2>
       <Counts labels={LIKELIHOOD_LABELS} counts={s.likelihoodCounts} />
 
+      <h2>Date planner</h2>
+      <div className="stats">
+        <div className="stat">
+          <span className="muted">Date plans made</span>
+          <b>{s.plansMade}</b>
+        </div>
+        <div className="stat">
+          <span className="muted">Respondents who planned</span>
+          <b>
+            {s.respondentsWhoPlanned} of {s.total}
+          </b>
+        </div>
+      </div>
+      {s.pickCounts.length > 0 && (
+        <p className="muted">
+          Most picked:{" "}
+          {s.pickCounts
+            .slice(0, 5)
+            .map(([id, count]) => `${nameOf(id)} (${count})`)
+            .join(", ")}
+        </p>
+      )}
+
       <h2>Every response</h2>
       {responses.length === 0 ? (
         <p className="muted">No responses yet.</p>
@@ -144,6 +169,7 @@ async function Results({ searchParams }: Pick<PageProps<"/results">, "searchPara
                 <th>About them</th>
                 <th>Looking for</th>
                 <th>Matches</th>
+                <th>Picked</th>
                 <th>More likely?</th>
                 <th>Why</th>
               </tr>
@@ -170,6 +196,7 @@ async function Results({ searchParams }: Pick<PageProps<"/results">, "searchPara
                     {AREA_FLEX_LABELS[r.details.areaFlex]}
                   </td>
                   <td>{r.matchCount}</td>
+                  <td>{r.picks.length ? r.picks.map((p) => nameOf(p.profileId)).join(", ") : "–"}</td>
                   <td>{r.post ? LIKELIHOOD_LABELS[r.post.likelihood] : "–"}</td>
                   <td className="text">{r.post?.why ?? "–"}</td>
                 </tr>

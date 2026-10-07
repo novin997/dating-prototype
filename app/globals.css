@@ -218,6 +218,20 @@ button:disabled {
   margin: 4px 0 8px;
 }
 
+.card button {
+  padding: 8px 14px;
+  font-size: 0.9rem;
+}
+
+.stops {
+  padding-left: 20px;
+  margin: 8px 0 16px;
+}
+
+.stops li {
+  margin-bottom: 10px;
+}
+
 .notice {
   background: var(--accent-soft);
   border-radius: 12px;
