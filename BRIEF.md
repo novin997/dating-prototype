@@ -41,7 +41,7 @@ A dating product can create the time off, money or incentive that singles say is
 
 ## First version
 
-1. Story 1: a rough matching prototype anyone can open from one link, with the questions built in.
+1. Story 1: a public landing page at `/` (app name, team, problem, target user, outcome metric, riskiest assumption, and evidence), then a rough matching prototype at `/try` anyone can open from one link, with the questions built in.
    - Consent screen: "This is a research prototype. Your answers are anonymous and stored to help us understand dating in Singapore. The profiles shown are fictional. Don't enter anything that identifies you." When the date planner is on, it adds: "Date ideas are written by an AI service. Your age, area, budget and free evenings (never your written answers) are sent to it."
    - Before matching: what makes dating hard (free text), top two barriers (money / time / finding someone suitable / energy after work / other), cost of the last date in dollars and hours including travel, and when it is hardest to date (busy work periods / end of month / weekends taken up / no particular time / other).
    - Details: age, gender, area (North, South, East, West, Central), free evenings per week, budget per date. Looking for: gender(s), age range, area flexibility. No name, phone, photo, NRIC or email.
@@ -73,10 +73,11 @@ If it goes wrong: they see a message saying there is no successful match, and ar
 - Process: build locally, the owner tries it, then deploy after approval.
 - English only.
 - Look: a playful style aimed at 25 to 35 year olds, with Otto the otter on every screen. Otto's lines stay neutral so they don't sway answers, and the question wording is unchanged.
+- Public name: Date Without the Cost, by Team Otto.
 
 ## Not building
 
-- Anything beyond the four steps above: no messaging, no scheduling and no extra screens until the bet is tested. Approved exceptions: the password-protected results page, and the date planner (an extra screen with an itinerary). Turning the planner on means gate 2 partly measures the planner.
+- Anything beyond the four steps above: no messaging, no scheduling and no extra screens until the bet is tested. Approved exceptions: the password-protected results page, the date planner (an extra screen with an itinerary), and the public landing page. Turning the planner on means gate 2 partly measures the planner.
 - No promise of time off, money or other incentives until the bet is tested.
 - No attempt to move the fertility rate; that sits outside the first version.
 

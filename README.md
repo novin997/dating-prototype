@@ -4,7 +4,7 @@ Research prototype for the brief in [BRIEF.md](BRIEF.md).
 
 ```bash
 npm install
-npm run dev     # http://localhost:3000, results at /results
+npm run dev     # http://localhost:3000 landing, prototype at /try, results at /results
 npm test        # core logic tests
 ```
 
