@@ -156,7 +156,9 @@ export default function Flow({ plannerEnabled }: { plannerEnabled: boolean }) {
   const [planFor, setPlanFor] = useState<Profile | null>(null);
   const [planning, setPlanning] = useState<string | null>(null);
 
-  useEffect(() => window.scrollTo(0, 0), [step]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [step]);
 
   function go(next: Step) {
     setErrors({});
