@@ -12,17 +12,15 @@ import {
 import type { DatePlan } from "@/lib/date-plan";
 import { MIN_AGE, type Barrier, type Gender, type Profile } from "@/lib/types";
 import { validateDetails, validatePost, validatePre } from "@/lib/validation";
+import { Buddy } from "./Mascot";
 
 type Step = "consent" | "pre" | "details" | "matches" | "plan" | "post" | "thanks";
 type Errors = Record<string, string>;
 
-const STEP_NUMBER: Partial<Record<Step, string>> = {
-  pre: "Step 1 of 4",
-  details: "Step 2 of 4",
-  matches: "Step 3 of 4",
-  plan: "Step 3 of 4",
-  post: "Step 4 of 4",
-};
+const STEP_COUNT = 4;
+const STEP_NUMBER: Partial<Record<Step, number>> = { pre: 1, details: 2, matches: 3, plan: 3, post: 4 };
+
+const AVATAR_COLORS = ["#ff8fa3", "#b69cff", "#ffc94d", "#7dd3c0", "#7cc4ff"];
 
 const emptyPre = {
   whatMakesItHard: "",
@@ -235,11 +233,22 @@ export default function Flow({ plannerEnabled }: { plannerEnabled: boolean }) {
   }
 
   const formError = errors.form && <p className="error">{errors.form}</p>;
-  const stepLabel = STEP_NUMBER[step] && <p className="step">{STEP_NUMBER[step]}</p>;
+  const stepNumber = STEP_NUMBER[step];
+  const stepLabel = stepNumber && (
+    <div className="progress">
+      <p className="step">
+        Step {stepNumber} of {STEP_COUNT}
+      </p>
+      <div className="progress-track">
+        <div className="progress-fill" style={{ width: `${(stepNumber / STEP_COUNT) * 100}%` }} />
+      </div>
+    </div>
+  );
 
   if (step === "consent") {
     return (
       <>
+        <Buddy mood="wave">Hi, I&apos;m Otto! I&apos;ll keep you company for the next 3 minutes.</Buddy>
         <h1>Dating in Singapore, without the cost</h1>
         <p>
           We&apos;re exploring an app that helps singles go on dates without giving up the money and time they&apos;d
@@ -267,6 +276,7 @@ export default function Flow({ plannerEnabled }: { plannerEnabled: boolean }) {
     return (
       <>
         {stepLabel}
+        <Buddy mood="think">No right or wrong answers here. Just tell it like it is.</Buddy>
         <h1>First, about dating today</h1>
         <Field label="What makes going on a date hard for you?" error={errors.whatMakesItHard}>
           <textarea
@@ -330,6 +340,7 @@ export default function Flow({ plannerEnabled }: { plannerEnabled: boolean }) {
     return (
       <>
         {stepLabel}
+        <Buddy mood="note">Just the basics, nothing that says who you are.</Buddy>
         <h1>About you, and who you&apos;d like to meet</h1>
         <div className="row">
           <Field label="Your age" error={errors.age}>
@@ -437,6 +448,7 @@ export default function Flow({ plannerEnabled }: { plannerEnabled: boolean }) {
         {stepLabel}
         {matches.length === 0 ? (
           <>
+            <Buddy mood="sad">Hmm, nobody fits just yet. Let&apos;s try tweaking things.</Buddy>
             <h1>No successful match</h1>
             <div className="notice">
               Nobody fits your preferences right now. Try widening your age range, or choose &ldquo;Anywhere in
@@ -451,11 +463,15 @@ export default function Flow({ plannerEnabled }: { plannerEnabled: boolean }) {
           </>
         ) : (
           <>
+            <Buddy mood="love">Here&apos;s who I found for you!</Buddy>
             <h1>Your suggestions</h1>
             <p className="muted">These are sample profiles, not real people.</p>
-            {matches.map((p) => (
+            {matches.map((p, i) => (
               <div key={p.id} className="card">
                 <div className="card-head">
+                  <span className="avatar" style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }} aria-hidden="true">
+                    {p.name[0]}
+                  </span>
                   <strong>
                     {p.name}, {p.age}
                   </strong>
@@ -493,6 +509,7 @@ export default function Flow({ plannerEnabled }: { plannerEnabled: boolean }) {
     return (
       <>
         {stepLabel}
+        <Buddy mood="plan">Here&apos;s one way a date with {planFor.name} could go.</Buddy>
         <h1>A date with {planFor.name}</h1>
         <p className="muted">
           <span className="tag">Sample profile</span> {AREA_LABELS[planFor.area]} · S${planFor.budget} per date
@@ -512,6 +529,7 @@ export default function Flow({ plannerEnabled }: { plannerEnabled: boolean }) {
     return (
       <>
         {stepLabel}
+        <Buddy mood="ask">Last one, promise!</Buddy>
         <h1>Last question</h1>
         <Field label="Would something like this make you more likely to go on a date?" error={errors.likelihood}>
           <Radios
@@ -536,6 +554,7 @@ export default function Flow({ plannerEnabled }: { plannerEnabled: boolean }) {
 
   return (
     <>
+      <Buddy mood="party">You&apos;re a star. Thanks for helping out!</Buddy>
       <h1>Thank you</h1>
       <p>Your answers are saved. They&apos;ll help shape whether and how this gets built.</p>
     </>

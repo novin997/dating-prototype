@@ -13,6 +13,7 @@ import { hasValidSession, RESULTS_COOKIE } from "@/lib/results-auth";
 import { SAMPLE_PROFILES } from "@/lib/profiles";
 import { getStore } from "@/lib/store";
 import { GATE_THRESHOLD, MIN_RESPONSES, summarize, type Gate } from "@/lib/summary";
+import { Buddy } from "../Mascot";
 
 export const metadata: Metadata = {
   title: "Results",
@@ -58,6 +59,7 @@ function Counts<K extends string>({ labels, counts }: { labels: Record<K, string
 function Login({ failed, configured }: { failed: boolean; configured: boolean }) {
   return (
     <main className="page">
+      <Buddy mood="lock">Team only past this point, sorry!</Buddy>
       <h1>Results</h1>
       {!configured ? (
         <p>The results password isn&apos;t set. Add RESULTS_PASSWORD to the environment.</p>
@@ -97,6 +99,7 @@ async function Results({ searchParams }: Pick<PageProps<"/results">, "searchPara
 
   return (
     <main className="page wide">
+      <Buddy mood="chart">Here&apos;s what everyone said so far.</Buddy>
       <h1>Results</h1>
       <p className="muted">
         {s.total} responses, {s.withPost} answered the last question. Gates are judged once there are{" "}

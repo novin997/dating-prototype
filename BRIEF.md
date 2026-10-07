@@ -72,6 +72,7 @@ If it goes wrong: they see a message saying there is no successful match, and ar
 - Date planner model: OpenCode Zen (`https://opencode.ai/zen/v1/chat/completions`), model `space-bunny-free` by default (set with `OPENCODE_MODEL`). It is free for a limited time, and its provider keeps no data and does not train on it. Needs `OPENCODE_API_KEY`. The plan text is not stored; the results page records who was picked.
 - Process: build locally, the owner tries it, then deploy after approval.
 - English only.
+- Look: a playful style aimed at 25 to 35 year olds, with Otto the otter on every screen. Otto's lines stay neutral so they don't sway answers, and the question wording is unchanged.
 
 ## Not building
 
